@@ -1,0 +1,29 @@
+# ```
+# # Build the image
+# docker build -f Dockerfile.mysql . --tag mysql-udf-bug
+#
+# # Run the container
+# docker run --rm -e MYSQL_ROOT_PASSWORD=example --name mysql-udf-bug-c mysql-udf-bug
+#
+# # Enter a SQL console
+# docker exec -it mysql-udf-bug-c mysql -pexample
+# 
+# # Load function
+# CREATE FUNCTION udf_buf_bug RETURNS string SONAME 'udf_bug.so';
+# select udf_buf_bug();
+# set @xyz = (select udf_buf_bug());
+# ```
+
+FROM gcc:latest AS build
+
+WORKDIR /build
+
+COPY . .
+
+RUN gcc -shared -fPIC udf_bug.c -o udf_bug.so \
+    && mkdir /output \
+    && cp udf_bug.so /output
+
+FROM mysql:8.0-debian
+
+COPY --from=build /output/* /usr/lib/mysql/plugin/
